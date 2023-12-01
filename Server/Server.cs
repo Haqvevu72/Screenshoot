@@ -54,14 +54,27 @@ namespace Server
 
                     var bytes_image = ImageToByte(bitmap_image);
 
-
-                    Listener.SendTo(bytes_image,SocketFlags.None,remote_EndPoint);
-
                     Console.WriteLine(bytes_image.Length);
-                    
-                    Console.WriteLine("Has Been Sent !");
+                    // Fragmentation
+                    int chunkSize = 1024; // Set your desired chunk size
+                    for (int i = 0; i < bytes_image.Length; i += chunkSize)
+                    {
+                        int remainingBytes = Math.Min(chunkSize, bytes_image.Length - i);
+                        byte[] chunk = new byte[remainingBytes];
+                        Buffer.BlockCopy(bytes_image, i, chunk, 0, remainingBytes);
 
-                    buffer = null;
+                        // Send each chunk
+                        try
+                        {
+                            Listener.SendTo(chunk, SocketFlags.None, remote_EndPoint);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error sending data: {ex.Message}");
+                            // Handle the error as needed
+                        }
+                        Console.WriteLine(chunk.Length);
+                    }
 
 
                 }
@@ -73,7 +86,9 @@ namespace Server
         {
             try
             {
-                Bitmap Capture_bitmap = new Bitmap(1024, 768, PixelFormat.Format32bppArgb);
+                var width = Screen.PrimaryScreen.Bounds.Width;
+                var height = Screen.PrimaryScreen.Bounds.Height;
+                Bitmap Capture_bitmap = new Bitmap(width,height);
 
                 Rectangle Capture_rectangle = Screen.AllScreens[0].Bounds;
 

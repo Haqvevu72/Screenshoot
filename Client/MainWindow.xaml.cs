@@ -56,13 +56,27 @@ namespace Client
             try
             {
                 // Use asynchronous methods for network operations
-                var receive_buffer = new byte[ushort.MaxValue - 29];
-                var len = await Task.Run(() =>
+                var chunkSize = 1024; // Set your desired chunk size
+                var receiveBuffer = new List<byte>();
+                int bytesRead;
+                int last = 0;
+                do
                 {
-                    return Client.ReceiveFrom(receive_buffer, 65506, SocketFlags.None, ref remote_endpoint);
-                });
+                    var chunk = new byte[chunkSize]; 
+                    bytesRead = await Task.Run(() =>
+                    {
+                        return Client.Receive(chunk, chunk.Length, SocketFlags.None);
+                    });
 
-                var image = LoadImage(receive_buffer);
+                    if (bytesRead > 0)
+                    {
+                        
+                        receiveBuffer.AddRange(chunk.Take(bytesRead));
+                    }
+
+                } while (bytesRead == chunkSize);
+
+                var image = LoadImage(receiveBuffer.ToArray());
 
                 // Use Dispatcher.InvokeAsync for UI updates
                 await Dispatcher.InvokeAsync(() => { ImageFrame.Source = image; });
@@ -73,6 +87,7 @@ namespace Client
                 MessageBox.Show($"Error loading image: {ex.Message}");
             }
         }
+
 
 
         private static BitmapImage? LoadImage(byte[] imageData)
