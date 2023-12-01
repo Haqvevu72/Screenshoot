@@ -16,7 +16,7 @@ namespace Server
 
         static void Main(string[] args)
         {
-            string Path = @"C:\Users\Elgun\Desktop\Capture.png";
+            
 
             var Listener = new Socket(
                 AddressFamily.InterNetwork,
@@ -35,13 +35,13 @@ namespace Server
 
             var msg = "";
             var len = 0;
-            var buffer = new byte[ushort.MaxValue - 29];
 
             Listener.Bind(EndPoint);
 
             EndPoint remote_EndPoint = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
+                var buffer = new byte[ushort.MaxValue - 29];
                 len = Listener.ReceiveFrom(buffer, ref remote_EndPoint);
 
                 msg = Encoding.Default.GetString(buffer, 0, len);
@@ -50,20 +50,26 @@ namespace Server
                 {
                     Console.WriteLine($"{remote_EndPoint.ToString()}: {msg}");
 
-                    CaptureMyScreen();
-                    
-                    byte[] send_buffer = Encoding.Default.GetBytes(Path);
-                    
-                    Listener.SendTo(send_buffer, remote_EndPoint);
+                    var bitmap_image = CaptureMyScreen();
 
+                    var bytes_image = ImageToByte(bitmap_image);
+
+
+                    Listener.SendTo(bytes_image,SocketFlags.None,remote_EndPoint);
+
+                    Console.WriteLine(bytes_image.Length);
+                    
                     Console.WriteLine("Has Been Sent !");
+
+                    buffer = null;
+
 
                 }
             }
 
         }
 
-        static private void CaptureMyScreen()
+        static private Bitmap CaptureMyScreen()
         {
             try
             {
@@ -74,15 +80,23 @@ namespace Server
                 Graphics Capture_graphics = Graphics.FromImage(Capture_bitmap);
                 Capture_graphics.CopyFromScreen(Capture_rectangle.Left, Capture_rectangle.Top, 0, 0, Capture_rectangle.Size);
 
-                Capture_bitmap.Save(@"C:\Users\Elgun\Desktop\Capture.png", ImageFormat.Png);
-
-                Console.WriteLine("Has Been Captured Successfully !");
+                return Capture_bitmap;
              
             }
             
             catch(Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                return null;
+            }
+        }
+
+        static byte[] ImageToByte(Image img)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                img.Save(ms, ImageFormat.Jpeg);
+                return ms.ToArray();
             }
         }
     }
