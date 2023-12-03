@@ -7,6 +7,8 @@ using System.Drawing.Imaging;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.IO;
+using System.Linq;
+using System.Diagnostics;
 #pragma warning disable
 
 namespace Server
@@ -16,18 +18,13 @@ namespace Server
 
         static void Main(string[] args)
         {
-            
-
             var Listener = new Socket(
                 AddressFamily.InterNetwork,
                 SocketType.Dgram,
                 ProtocolType.Udp
             );
 
-
-
-
-
+            
             var IP = IPAddress.Parse("127.0.0.1");   
             var Port = 4000;                         
 
@@ -36,9 +33,10 @@ namespace Server
             var msg = "";
             var len = 0;
 
-            Listener.Bind(EndPoint);
+            Listener.Bind(EndPoint);  // Server 127.0.0.1:4000 EndPoint-ne Bind() Funksiyasi Ile Qosulur
 
-            EndPoint remote_EndPoint = new IPEndPoint(IPAddress.Any, 0);
+            EndPoint remote_EndPoint = new IPEndPoint(IPAddress.Any, 0);  // Remote EndPoint Server-le Elaqe Quracaq Client-in EndPoint-dir
+                                                                          // IPAddress.Any -> Istenilen IP addressin , 0 -> Istenilen Portu
             while (true)
             {
                 var buffer = new byte[ushort.MaxValue - 29];
@@ -55,18 +53,20 @@ namespace Server
                     var bytes_image = ImageToByte(bitmap_image);
 
                     Console.WriteLine(bytes_image.Length);
+
                     // Fragmentation
                     int chunkSize = 1024; // Set your desired chunk size
                     for (int i = 0; i < bytes_image.Length; i += chunkSize)
                     {
-                        int remainingBytes = Math.Min(chunkSize, bytes_image.Length - i);
-                        byte[] chunk = new byte[remainingBytes];
-                        Buffer.BlockCopy(bytes_image, i, chunk, 0, remainingBytes);
+                        int remainingBytes = Math.Min(chunkSize, bytes_image.Length - i); // 1024 chixir her defe ta ki , alinan reqem 1024-den kicik olsun
+                        byte[] chunk = new byte[remainingBytes]; // chixilan olchude byte massivi yaradilir .
+                        Buffer.BlockCopy(bytes_image, i, chunk, 0, remainingBytes); // Ve Boyuk Image-den 1024 ve ya daha kick byte yaradilan massive kocurulur
 
                         // Send each chunk
                         try
                         {
                             Listener.SendTo(chunk, SocketFlags.None, remote_EndPoint);
+                            
                         }
                         catch (Exception ex)
                         {
@@ -74,6 +74,7 @@ namespace Server
                             // Handle the error as needed
                         }
                         Console.WriteLine(chunk.Length);
+                      
                     }
 
 
