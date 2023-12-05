@@ -40,53 +40,54 @@ namespace Client
 
         private async void Button_Click(object sender, RoutedEventArgs e)
         {
+            string message = "Send Screenshoot";
+
+            byte[] buffer = Encoding.Default.GetBytes(message);
+
+            Client.SendTo(buffer, remote_endpoint);
+
             SetImageSource();
         }
 
         private async void SetImageSource()
         {
-            while (true)
+
+
+
+            try
             {
-                string message = "Send Screenshoot";
+                // Use asynchronous methods for network operations
+                var chunkSize = 1024; // Set your desired chunk size
+                var receiveBuffer = new List<byte>();  // Gelen Byte-lar Burda Toplanir [1024 , 1024 , 640]
+                int bytesRead; // Oxunan Byte-in olchusu bura yazilir 1024 , 450 , 230
 
-                byte[] buffer = Encoding.Default.GetBytes(message);
-
-                Client.SendTo(buffer, remote_endpoint);
-
-                try
+                do
                 {
-                    // Use asynchronous methods for network operations
-                    var chunkSize = 1024; // Set your desired chunk size
-                    var receiveBuffer = new List<byte>();  // Gelen Byte-lar Burda Toplanir [1024 , 1024 , 640]
-                    int bytesRead; // Oxunan Byte-in olchusu bura yazilir 1024 , 450 , 230
-
-                    do
+                    var chunk = new byte[chunkSize];
+                    bytesRead = await Task.Run(() =>
                     {
-                        var chunk = new byte[chunkSize];
-                        bytesRead = await Task.Run(() =>
-                        {
-                            return Client.ReceiveFrom(chunk, SocketFlags.None, ref remote_endpoint);
-                        });
+                        return Client.ReceiveFrom(chunk, SocketFlags.None, ref remote_endpoint);
+                    });
 
-                        if (bytesRead > 0)
-                        {
+                    if (bytesRead > 0)
+                    {
 
-                            receiveBuffer.AddRange(chunk.Take(bytesRead));
-                        }
+                        receiveBuffer.AddRange(chunk.Take(bytesRead));
+                    }
 
-                    } while (bytesRead == chunkSize);
+                } while (bytesRead == chunkSize);
 
-                    var image = LoadImage(receiveBuffer.ToArray());
+                var image = LoadImage(receiveBuffer.ToArray());
 
-                    // Use Dispatcher.InvokeAsync for UI updates
-                    await Dispatcher.InvokeAsync(() => { ImageFrame.Source = image; });
-                }
-                catch (Exception ex)
-                {
-                    // Handle exceptions more specifically or log them
-                    MessageBox.Show($"Error loading image: {ex.Message}");
-                }
+                // Use Dispatcher.InvokeAsync for UI updates
+                await Dispatcher.InvokeAsync(() => { ImageFrame.Source = image; });
             }
+            catch (Exception ex)
+            {
+                // Handle exceptions more specifically or log them
+                MessageBox.Show($"Error loading image: {ex.Message}");
+            }
+
 
         }
 
